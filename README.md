@@ -1,0 +1,1 @@
+# ha_syno-photo-card
