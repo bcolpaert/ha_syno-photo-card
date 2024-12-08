@@ -591,7 +591,7 @@ class SynoPhotoCard extends LitElement {
   //#endregion
 
 }
-customElements.define("gallery-card", SynoPhotoCard);
+customElements.define("syno-photo-card", SynoPhotoCard);
 
 console.groupCollapsed(`%cSYNO_PHOTO-CARD ${SynoPhotoCardVersion} IS INSTALLED`,"color: blue; font-weight: bold");
 console.log("Readme:","https://github.com/bcolpaert/ha_syno-photo-card");
@@ -599,7 +599,7 @@ console.groupEnd();
 
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "gallery-card",
+  type: "syno-photo-card",
   name: "Synolgy Photos Card",
   preview: false, // Optional - defaults to false
   description: "The Synolgy Photos Card allows for viewing multiple images/videos available the Synology Photos." // Optional
