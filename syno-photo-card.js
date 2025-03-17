@@ -135,6 +135,13 @@ class SynoPhotoCard extends LitElement {
           width: 100%;
         }
       }
+      /* DEBUG window */
+      #debugTrace {
+        display: block;
+        width: auto;
+        height: 150px;
+        overflow-y: scroll;
+      }
     `;
   }
 
@@ -170,6 +177,15 @@ class SynoPhotoCard extends LitElement {
             <img class="modal-content" id="popupImage">
             <div id="popupCaption"></div>
           </div>
+          ${!(this._debug ?? false) ?
+            html`` : 
+            html`<div id="debugTrace">
+              ${this._tracelog.map((element) => {
+                  return html`${element}<br /> `;
+                }
+              )}
+            </div>`
+          }
         </ha-card>
     `;
   }
@@ -261,7 +277,6 @@ class SynoPhotoCard extends LitElement {
 
   
   //#region Render methods
-
   _currentResource(){
     //isHass
     //name
@@ -311,9 +326,17 @@ class SynoPhotoCard extends LitElement {
   _popupCamera(event){
 
   }
-  _popupImage(event){
+  _popupImage(evt) {
+    var modal = this.shadowRoot.getElementById("imageModal");    
+    modal.style.display = "block";
+    this._loadImageForPopup();
+    modal.scrollIntoView(true);
 
+    modal.onclick = function() {
+      modal.style.display = "none";
+    }
   }
+
   _videoMetadataLoaded(event){
 
   }
@@ -326,9 +349,12 @@ class SynoPhotoCard extends LitElement {
   //#region internal methods
 
   _debug = true;
+  _tracelog = [];
   _trace(txt){
-    if (this._debug)
+    if (this._debug){
       console.log(txt);
+      this._tracelog.unshift(txt);
+    }
   }
 
   _format(str, item) {
@@ -351,7 +377,7 @@ class SynoPhotoCard extends LitElement {
     });
 
     return str;
-}
+  }
 
   _domainUsers = [];
   _loadResources(ref){
@@ -427,8 +453,7 @@ class SynoPhotoCard extends LitElement {
           ref._startSlideShow();
       })
       .catch(function(error){
-        
-        
+        ref._trace(error);
       });
 
     }
@@ -448,8 +473,7 @@ class SynoPhotoCard extends LitElement {
       ref._getItem(ref, item.entity, data);
     })
     .catch(function(error){
-      
-      
+      ref._trace(error);
     });
   }
 
@@ -464,11 +488,21 @@ class SynoPhotoCard extends LitElement {
       ref._currentResourceItem = { url: url, name: item.filename, isImage: item?.type == "photo", caption: caption };
     })
     .catch(function(error){
-      
-      
+      ref._trace(error);
     });
   }
-// return { url: "", name: "", isImage: true, caption: "DEBUG" };
+
+  _loadImageForPopup() {
+    var modal = this.shadowRoot.getElementById("imageModal");
+    var modalImg = this.shadowRoot.getElementById("popupImage");
+    var captionText = this.shadowRoot.getElementById("popupCaption");
+
+    if (modal.style.display == "block") {
+      modalImg.src = this._currentResource().url;
+      captionText.innerHTML = this._currentResource().caption;
+    }
+  }
+  
   //#endregion
 
   //#region Synology API
@@ -514,8 +548,8 @@ class SynoPhotoCard extends LitElement {
           if (data?.success == true) {
             resolve(data.data?.section);
           } else {
-            ref._trace(`ERROR SYNO.Foto.Browse.Timeline: ${data?.error}`)
-            reject(data?.error);
+            ref._trace(`ERROR SYNO.Foto.Browse.Timeline: ${data?.error?.code}`)
+            reject(data?.error?.code);
           }
         })
         .catch(error => {
@@ -567,7 +601,7 @@ class SynoPhotoCard extends LitElement {
     return new Promise(async (resolve, reject) => { 
       fetch(apiUrl, { method: 'GET', credentials: 'include' })
         .then(response => { 
-          ref._trace(`_synoGetImage: ${response}`);
+          ref._trace(`_synoGetImage ${filename}: ${response.status}`);
           if (!response.ok) {
             reject(`${filename} response was not ok`);
           }
