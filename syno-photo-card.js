@@ -223,6 +223,7 @@ class SynoPhotoCard extends LitElement {
     }
 
     this.config = config;
+    this._debug = (this.config.debug ?? false);
     if (this.config.entity) {
       if (!this.config.entities) {
         this.config = { ...this.config, entities: [] };
@@ -348,7 +349,7 @@ class SynoPhotoCard extends LitElement {
 
   //#region internal methods
 
-  _debug = true;
+  _debug = false;
   _tracelog = [];
   _trace(txt){
     if (this._debug){
