@@ -355,6 +355,8 @@ class SynoPhotoCard extends LitElement {
     if (this._debug){
       console.log(txt);
       this._tracelog.unshift(txt);
+      if (this._tracelog.length > 100)
+        this._tracelog.splice(100);
     }
   }
 
@@ -387,11 +389,11 @@ class SynoPhotoCard extends LitElement {
       const key = `${element.user}@${element.domain}`;
       let domainUser = ref._domainUsers.find(k => k.key == key);
       if (domainUser == undefined){
-        domainUser = { key: key, domain: element.domain, type: 'timeline', token: true};
+        domainUser = { key: key, type: 'timeline', token: true, credentials: element};
         ref._domainUsers.push(domainUser);
-        ref._synoLogin(element.domain, element.user, element.pass)
+        ref._synoLogin(domainUser.credentials.domain, domainUser.credentials.user, domainUser.credentials.pass)
         .then(function(data){
-          domainUser.auth = { token: data?.synotoken, sid: data?.sid};
+          domainUser.auth = { token: data?.synotoken, sid: data?.sid, timestamp: new Date()};
           ref._initItems(ref, domainUser);
         })
         .catch(function(error){
@@ -430,7 +432,7 @@ class SynoPhotoCard extends LitElement {
 
   _initItems(ref, domainUser) {
     if (domainUser.type == 'timeline'){
-      ref._synoBrowseTimeline(domainUser.domain, domainUser.auth)
+      ref._synoBrowseTimeline(domainUser.credentials.domain, domainUser.auth)
       .then(function(data){
         if (ref.resources == null) ref.resources = [];
         const processedLists = [];
@@ -467,19 +469,37 @@ class SynoPhotoCard extends LitElement {
 
     // Keep max items in cache
     if (ref._prevResourceItems.length > 5) ref._prevResourceItems.shift();
-    if (ref._prevResourceItems.push(ref._currentResourceItem))
+    if (ref._prevResourceItems.push(ref._currentResourceItem));
+
+    var loadItem = () => {
+      ref._synoBrowseItem(item.entity.credentials.domain, item.entity.auth, index, item.starttime, item.endtime)
+      .then(function(data){
+        ref._getItem(ref, item.entity, data);
+      })
+      .catch(function(error){
+        ref._trace(error);
+      });
+    }
     
-    ref._synoBrowseItem(item.entity.domain, item.entity.auth, index, item.starttime, item.endtime)
-    .then(function(data){
-      ref._getItem(ref, item.entity, data);
-    })
-    .catch(function(error){
-      ref._trace(error);
-    });
+    var now = new Date();
+    var tokenAgeHours = (now.getTime() - item.entity.auth.timestamp.getTime()) / (1000 * 60 * 60); // hours
+    if (tokenAgeHours > 1) {
+      item.entity.auth.token = true;
+      ref._synoLogin(item.entity.credentials.domain, item.entity.credentials.user, item.entity.credentials.pass)
+        .then(function(data){
+          item.entity.auth = { token: data?.synotoken, sid: data?.sid, timestamp: new Date()};
+          loadItem();
+        })
+        .catch(function(error){
+          item.entity.auth.token = false;
+        });
+    } else {
+      loadItem();
+    }
   }
 
   _getItem(ref, entity, item) {
-    ref._synoGetImage(entity.domain, entity.auth, item)
+    ref._synoGetImage(entity.credentials.domain, entity.auth, item)
     .then(function(url){
       var caption = item.filename;
       var format = ref.config.caption_format;
